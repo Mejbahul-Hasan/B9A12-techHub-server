@@ -60,7 +60,8 @@ async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
 
-        // const servicesCollection = client.db("techHubDB").collection("services");
+        const productsCollection = client.db("techHubDB").collection("products");
+        const reviewsCollection = client.db("techHubDB").collection("reviews");
 
         // Auth related api: jwt generate
         // app.post('/jwt', async (req, res) => {
@@ -88,11 +89,31 @@ async function run() {
 
         // Service related api
 
-        // read all services data for homePage
-        // app.get('/services', async (req, res) => {
-        //     const result = await servicesCollection.find().sort({ Deadline: 1 }).toArray();
-        //     res.send(result);
-        // })
+        // read all Featured Products data for homePage
+        app.get('/products-feature', async (req, res) => {
+            const result = await productsCollection.find().sort({ createdAt: -1 }).toArray();
+            res.send(result);
+        })
+
+        // read all Tending Products data for homePage
+        app.get('/products-trend', async (req, res) => {
+            const result = await productsCollection.find().sort({ upvote_count: -1 }).toArray();
+            res.send(result);
+        })
+
+        // Read a single data for product details page
+        app.get('/product-details/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const result = await productsCollection.findOne(query)
+            res.send(result);
+        })
+
+        // read all reviews data for product details page
+        app.get('/reviews', async (req, res) => {
+            const result = await reviewsCollection.find().toArray();
+            res.send(result);
+        })
 
         
 
