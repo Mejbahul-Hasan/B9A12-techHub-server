@@ -9,7 +9,7 @@ const port = process.env.PORT || 5000;
 
 const corsOptions = {
     origin: [
-        'http://localhost:5173', 
+        'http://localhost:5173',
         // 'https://volunteerhub-cc355.web.app',
         // 'https://volunteerhub-cc355.firebaseapp.com',
     ],
@@ -115,7 +115,26 @@ async function run() {
             res.send(result);
         })
 
-        
+        // Create/save review data from the Post Review section
+        app.post('/addReviews', async (req, res) => {
+            const addReview = req.body;
+            // console.log(addReview);
+            const result = await reviewsCollection.insertOne(addReview);
+            res.send(result);
+        })
+
+        // Search data by tag for product Page
+        app.get('/search', async (req, res) => {
+            const search = req.query.search;
+            // console.log(search);
+            let query = {
+                tags: { $regex: search, $options: 'i' }
+            };
+            const result = await productsCollection.find(query).toArray();
+            res.send(result);
+        })
+
+
 
         // Send a ping to confirm a successful connection
         // await client.db("admin").command({ ping: 1 });
