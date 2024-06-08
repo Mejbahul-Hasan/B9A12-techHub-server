@@ -21,9 +21,27 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
+// Verify jwt middlewares
+const verifyToken = async (req, res, next) => {
+    const token = req.cookies?.token;
+    console.log('token in the middleware', token);
+    if (!token) {
+        return res.status(401).send({ message: 'unauthorized access' })
+    }
+    if (token) {
+        jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+            if (err) {
+                console.log(err)
+                return res.status(401).send({ message: "unauthorized access" })
+            }
+            req.user = decoded;
+            next();
+        })
+    }
+}
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.p3ukwfo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
     serverApi: {
         version: ServerApiVersion.v1,
@@ -32,29 +50,6 @@ const client = new MongoClient(uri, {
     }
 });
 
-// verify jwt middlewares
-// const verifyToken = (req, res, next) => {
-//     const token = req.cookies?.token;
-//     console.log('token in the middleware', token);
-//     if (!token) {
-//         return res.status(401).send({ message: 'unauthorized access' })
-//     }
-//     if (token) {
-//         jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decode) => {
-//             if (err) {
-//                 console.log(err)
-//                 return res.status(401).send({ message: "unauthorized access" })
-//             }
-//             req.user = decode;
-//             next();
-//         })
-//     }
-// }
-// const cookieOption = {
-//     httpOnly: true,
-//     sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-//     secure: process.env.NODE_ENV === "production" ? true : false,
-// }
 
 async function run() {
     try {
@@ -63,40 +58,73 @@ async function run() {
         const productsCollection = client.db("techHubDB").collection("products");
         const reviewsCollection = client.db("techHubDB").collection("reviews");
 
-        // Auth related api: jwt generate
-        // app.post('/jwt', async (req, res) => {
-        //     const user = req.body;
-        //     // console.log('user for token', user);
-        //     const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '7d' });
+        // verify admin middleware
+        const verifyAdmin = async (req, res, next) => {
+            console.log('hello')
+            const user = req.user
+            const query = { email: user?.email }
+            const result = await usersCollection.findOne(query)
+            console.log(result?.role)
+            if (!result || result?.role !== 'admin')
+                return res.status(401).send({ message: 'unauthorized access!!' })
 
-        //     res.cookie('token', token, {
-        //         httpOnly: true,
-        //         secure: process.env.NODE_ENV === 'production',
-        //         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-        //     })
+            next()
+        }
+        // verify host middleware
+        const verifyHost = async (req, res, next) => {
+            console.log('hello')
+            const user = req.user
+            const query = { email: user?.email }
+            const result = await usersCollection.findOne(query)
+            console.log(result?.role)
+            if (!result || result?.role !== 'host') {
+                return res.status(401).send({ message: 'unauthorized access!!' })
+            }
 
-        //     res.send({ success: true });
-        // })
+            next()
+        }
 
-        // app.post('/logOut', async (req, res) => {
-        //     const user = req.body;
-        //     // console.log('logging out', user);
-        //     res
-        //         .clearCookie('token', { ...cookieOption, maxAge: 0 })
-        //         .send({ success: true });
-        // });
+        // auth related api
+        app.post('/jwt', async (req, res) => {
+            const user = req.body
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+                expiresIn: '365d',
+            })
+            res
+                .cookie('token', token, {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+                })
+                .send({ success: true })
+        })
+        // Logout
+        app.get('/logout', async (req, res) => {
+            try {
+                res
+                    .clearCookie('token', {
+                        maxAge: 0,
+                        secure: process.env.NODE_ENV === 'production',
+                        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+                    })
+                    .send({ success: true })
+                console.log('Logout successful')
+            } catch (err) {
+                res.status(500).send(err)
+            }
+        })
 
 
         // Service related api
 
         // read all Featured Products data for homePage
-        app.get('/products-feature', async (req, res) => {
+        app.get('/feature-product', async (req, res) => {
             const result = await productsCollection.find().sort({ createdAt: -1 }).toArray();
             res.send(result);
         })
 
         // read all Tending Products data for homePage
-        app.get('/products-trend', async (req, res) => {
+        app.get('/trend-product', async (req, res) => {
             const result = await productsCollection.find().sort({ upvote_count: -1 }).toArray();
             res.send(result);
         })
