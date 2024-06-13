@@ -3,7 +3,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId, Timestamp } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -57,6 +57,7 @@ async function run() {
 
         const productsCollection = client.db("techHubDB").collection("products");
         const reviewsCollection = client.db("techHubDB").collection("reviews");
+        const usersCollection = client.db("techHubDB").collection("users");
 
         // verify admin middleware
         const verifyAdmin = async (req, res, next) => {
@@ -117,6 +118,64 @@ async function run() {
 
         // Service related api
 
+        // save a user data in db
+        app.put('/user', async (req, res) => {
+            const user = req.body
+
+            const query = { email: user?.email }
+            // check if user already exists in db
+            const isExist = await usersCollection.findOne(query)
+            if (isExist) {
+                if (user.status === 'Requested') {
+                    // if existing user try to change his role
+                    const result = await usersCollection.updateOne(query, {
+                        $set: { status: user?.status },
+                    })
+                    return res.send(result)
+                } else {
+                    // if existing user login again
+                    return res.send(isExist)
+                }
+            }
+
+            // save user for the first time
+            const options = { upsert: true }
+            const updateDoc = {
+                $set: {
+                    ...user,
+                    timestamp: Date.now(),
+                },
+            }
+            const result = await usersCollection.updateOne(query, updateDoc, options)
+            res.send(result)
+        })
+
+    // get a user info by email from db
+    app.get('/user/:email', async (req, res) => {
+        const email = req.params.email
+        const result = await usersCollection.findOne({ email })
+        res.send(result)
+      })
+  
+      // get all users data from db
+      app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
+        const result = await usersCollection.find().toArray()
+        res.send(result)
+      })
+  
+      //update a user role
+      app.patch('/users/update/:email', async (req, res) => {
+        const email = req.params.email
+        const user = req.body
+        const query = { email }
+        const updateDoc = {
+          $set: { ...user, timestamp: Date.now() },
+        }
+        const result = await usersCollection.updateOne(query, updateDoc)
+        res.send(result)
+      })
+  
+
         // read all Featured Products data for homePage
         app.get('/feature-product', async (req, res) => {
             const result = await productsCollection.find().sort({ createdAt: -1 }).toArray();
@@ -162,7 +221,29 @@ async function run() {
             res.send(result);
         })
 
+        // save add-product data from the add product page
+        app.post('/add-product', async (req, res) => {
+            const addProduct = req.body;
+            // console.log(addProduct);
+            const result = await productsCollection.insertOne(addProduct);
+            res.send(result);
+        })
 
+        // Read all products data for my product page
+        app.get('/my-product/:email', async (req, res) => {
+            const email = req.params.email
+            let query = { 'product_owner.email': email }
+            const result = await productsCollection.find(query).toArray()
+            res.send(result);
+        })
+
+        // Delete a single data from my product post
+        app.delete('/my-product/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const result = await productsCollection.deleteOne(query)
+            res.send(result)
+        })
 
         // Send a ping to confirm a successful connection
         // await client.db("admin").command({ ping: 1 });
