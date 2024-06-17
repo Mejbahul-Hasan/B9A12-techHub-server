@@ -150,31 +150,31 @@ async function run() {
             res.send(result)
         })
 
-    // get a user info by email from db
-    app.get('/user/:email', async (req, res) => {
-        const email = req.params.email
-        const result = await usersCollection.findOne({ email })
-        res.send(result)
-      })
-  
-      // get all users data from db
-      app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
-        const result = await usersCollection.find().toArray()
-        res.send(result)
-      })
-  
-      //update a user role
-      app.patch('/users/update/:email', async (req, res) => {
-        const email = req.params.email
-        const user = req.body
-        const query = { email }
-        const updateDoc = {
-          $set: { ...user, timestamp: Date.now() },
-        }
-        const result = await usersCollection.updateOne(query, updateDoc)
-        res.send(result)
-      })
-  
+        // get a user info by email from db
+        app.get('/user/:email', async (req, res) => {
+            const email = req.params.email
+            const result = await usersCollection.findOne({ email })
+            res.send(result)
+        })
+
+        // get all users data from db
+        app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
+            const result = await usersCollection.find().toArray()
+            res.send(result)
+        })
+
+        //update a user role
+        app.patch('/users/update/:email', async (req, res) => {
+            const email = req.params.email
+            const user = req.body
+            const query = { email }
+            const updateDoc = {
+                $set: { ...user, timestamp: Date.now() },
+            }
+            const result = await usersCollection.updateOne(query, updateDoc)
+            res.send(result)
+        })
+
 
         // read all Featured Products data for homePage
         app.get('/feature-product', async (req, res) => {
@@ -194,6 +194,18 @@ async function run() {
             const query = { _id: new ObjectId(id) }
             const result = await productsCollection.findOne(query)
             res.send(result);
+        })
+
+        // Update product REPORT in the Product Details section
+        app.patch('/reported-product/:id', async (req, res) => {
+            const id = req.params.id
+            const report = req.body
+            const query = { _id: new ObjectId(id) }
+            const updateDoc = {
+                $set: { report: 'Reported' },
+            }
+            const result = await productsCollection.updateOne(query, updateDoc)
+            res.send(result)
         })
 
         // read all reviews data for product details page
@@ -244,6 +256,33 @@ async function run() {
             const result = await productsCollection.deleteOne(query)
             res.send(result)
         })
+
+        // read all Products data for moderators dashboard
+        app.get('/moderator-product', async (req, res) => {
+            const result = await productsCollection.find().toArray();
+            res.send(result);
+        })
+
+        // Update product status in the Moderator Dashboard
+        app.patch('/moderator-product/:id', async (req, res) => {
+            const id = req.params.id
+            const status = req.body
+            const query = { _id: new ObjectId(id) }
+            const updateDoc = {
+                $set: status,
+            }
+            const result = await productsCollection.updateOne(query, updateDoc)
+            res.send(result)
+        })
+
+        // get all reported data by the moderator in Reported Content page
+        app.get('/reported-content/:report', async (req, res) => {
+            const report = req.report
+            let query = { 'report': "Reported" }
+            const result = await productsCollection.find(query).toArray()
+            res.send(result);
+        })
+        
 
         // Send a ping to confirm a successful connection
         // await client.db("admin").command({ ping: 1 });
