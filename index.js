@@ -175,11 +175,23 @@ async function run() {
             res.send(result)
         })
 
-
         // read all Featured Products data for homePage
-        app.get('/feature-product', async (req, res) => {
-            const result = await productsCollection.find().sort({ createdAt: -1 }).toArray();
+        app.get('/feature-product/:product', async (req, res) => {
+            const product = req.product
+            const query = {'product': "Featured"}
+            const result = await productsCollection.find(query).sort({ timestamp: -1 }).toArray();
             res.send(result);
+        })
+
+        // Vote Update in the feature/trend product section
+        app.patch('/product-vote/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const updateDoc = {
+                $inc: { upvote_count: 1 },
+            }
+            const result = await productsCollection.updateOne(query, updateDoc)
+            res.send(result)
         })
 
         // read all Tending Products data for homePage
@@ -199,7 +211,6 @@ async function run() {
         // Update product REPORT in the Product Details section
         app.patch('/reported-product/:id', async (req, res) => {
             const id = req.params.id
-            const report = req.body
             const query = { _id: new ObjectId(id) }
             const updateDoc = {
                 $set: { report: 'Reported' },
@@ -237,7 +248,11 @@ async function run() {
         app.post('/add-product', async (req, res) => {
             const addProduct = req.body;
             // console.log(addProduct);
-            const result = await productsCollection.insertOne(addProduct);
+            const updateDoc = {
+                    ...addProduct,
+                    timestamp: Date.now()
+                }
+            const result = await productsCollection.insertOne(updateDoc);
             res.send(result);
         })
 
@@ -247,6 +262,21 @@ async function run() {
             let query = { 'product_owner.email': email }
             const result = await productsCollection.find(query).toArray()
             res.send(result);
+        })
+
+        // update a product data in my product page
+        app.put('/update-product/:id', async (req, res) => {
+            const id = req.params.id
+            const productData = req.body
+            const query = { _id: new ObjectId(id) }
+            const options = { upsert: true }
+            const updateDoc = {
+                $set: {
+                    ...productData,
+                },
+            }
+            const result = await productsCollection.updateOne(query, updateDoc, options)
+            res.send(result)
         })
 
         // Delete a single data from my product post
@@ -275,6 +305,17 @@ async function run() {
             res.send(result)
         })
 
+        // Make product Featured in the Moderator Dashboard
+        app.patch('/feature-product/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const updateDoc = {
+                $set: { product: 'Featured' },
+            }
+            const result = await productsCollection.updateOne(query, updateDoc)
+            res.send(result)
+        })
+
         // get all reported data by the moderator in Reported Content page
         app.get('/reported-content/:report', async (req, res) => {
             const report = req.report
@@ -282,7 +323,7 @@ async function run() {
             const result = await productsCollection.find(query).toArray()
             res.send(result);
         })
-        
+
 
         // Send a ping to confirm a successful connection
         // await client.db("admin").command({ ping: 1 });
