@@ -71,19 +71,6 @@ async function run() {
 
             next()
         }
-        // verify host middleware
-        const verifyHost = async (req, res, next) => {
-            console.log('hello')
-            const user = req.user
-            const query = { email: user?.email }
-            const result = await usersCollection.findOne(query)
-            console.log(result?.role)
-            if (!result || result?.role !== 'host') {
-                return res.status(401).send({ message: 'unauthorized access!!' })
-            }
-
-            next()
-        }
 
         // auth related api
         app.post('/jwt', async (req, res) => {
@@ -121,7 +108,6 @@ async function run() {
         // save a user data in db
         app.put('/user', async (req, res) => {
             const user = req.body
-
             const query = { email: user?.email }
             // check if user already exists in db
             const isExist = await usersCollection.findOne(query)
@@ -178,13 +164,13 @@ async function run() {
         // read all Featured Products data for homePage
         app.get('/feature-product/:product', async (req, res) => {
             const product = req.product
-            const query = {'product': "Featured"}
+            const query = { 'product': "Featured" }
             const result = await productsCollection.find(query).sort({ timestamp: -1 }).toArray();
             res.send(result);
         })
 
         // Vote Update in the feature/trend product section
-        app.patch('/product-vote/:id', async (req, res) => {
+        app.patch('/product-vote/:id', verifyToken, async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const updateDoc = {
@@ -201,7 +187,7 @@ async function run() {
         })
 
         // Read a single data for product details page
-        app.get('/product-details/:id', async (req, res) => {
+        app.get('/product-details/:id', verifyToken, async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const result = await productsCollection.findOne(query)
@@ -209,7 +195,7 @@ async function run() {
         })
 
         // Update product REPORT in the Product Details section
-        app.patch('/reported-product/:id', async (req, res) => {
+        app.patch('/reported-product/:id', verifyToken, async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const updateDoc = {
@@ -233,12 +219,21 @@ async function run() {
             res.send(result);
         })
 
+        // read all accepted Products data for product page
+        app.get('/accepted-product/:status', async (req, res) => {
+            const status = req.status
+            const query = { 'status': "Accepted" }
+            const result = await productsCollection.find(query).toArray();
+            res.send(result);
+        })
+
         // Search data by tag for product Page
         app.get('/search', async (req, res) => {
             const search = req.query.search;
             // console.log(search);
             let query = {
-                tags: { $regex: search, $options: 'i' }
+                tags: { $regex: search, $options: 'i' },
+                'status': "Accepted"
             };
             const result = await productsCollection.find(query).toArray();
             res.send(result);
@@ -249,15 +244,15 @@ async function run() {
             const addProduct = req.body;
             // console.log(addProduct);
             const updateDoc = {
-                    ...addProduct,
-                    timestamp: Date.now()
-                }
+                ...addProduct,
+                timestamp: Date.now()
+            }
             const result = await productsCollection.insertOne(updateDoc);
             res.send(result);
         })
 
         // Read all products data for my product page
-        app.get('/my-product/:email', async (req, res) => {
+        app.get('/my-product/:email', verifyToken, async (req, res) => {
             const email = req.params.email
             let query = { 'product_owner.email': email }
             const result = await productsCollection.find(query).toArray()
@@ -265,7 +260,7 @@ async function run() {
         })
 
         // update a product data in my product page
-        app.put('/update-product/:id', async (req, res) => {
+        app.put('/update-product/:id', verifyToken, async (req, res) => {
             const id = req.params.id
             const productData = req.body
             const query = { _id: new ObjectId(id) }
@@ -280,7 +275,7 @@ async function run() {
         })
 
         // Delete a single data from my product post
-        app.delete('/my-product/:id', async (req, res) => {
+        app.delete('/my-product/:id', verifyToken, async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const result = await productsCollection.deleteOne(query)
@@ -294,7 +289,7 @@ async function run() {
         })
 
         // Update product status in the Moderator Dashboard
-        app.patch('/moderator-product/:id', async (req, res) => {
+        app.patch('/moderator-product/:id', verifyToken, async (req, res) => {
             const id = req.params.id
             const status = req.body
             const query = { _id: new ObjectId(id) }
@@ -306,7 +301,7 @@ async function run() {
         })
 
         // Make product Featured in the Moderator Dashboard
-        app.patch('/feature-product/:id', async (req, res) => {
+        app.patch('/feature-product/:id', verifyToken, async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const updateDoc = {
