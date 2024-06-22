@@ -10,8 +10,8 @@ const port = process.env.PORT || 5000;
 const corsOptions = {
     origin: [
         'http://localhost:5173',
-        // 'https://volunteerhub-cc355.web.app',
-        // 'https://volunteerhub-cc355.firebaseapp.com',
+        'https://tech-hub-826e6.web.app',
+        'https://tech-hub-826e6.firebaseapp.com',
     ],
     credentials: true,
     optionSuccessStatus: 200,
@@ -170,7 +170,7 @@ async function run() {
         })
 
         // Vote Update in the feature/trend product section
-        app.patch('/product-vote/:id', verifyToken, async (req, res) => {
+        app.patch('/product-vote/:id', async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const updateDoc = {
@@ -187,7 +187,7 @@ async function run() {
         })
 
         // Read a single data for product details page
-        app.get('/product-details/:id', verifyToken, async (req, res) => {
+        app.get('/product-details/:id', async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const result = await productsCollection.findOne(query)
@@ -195,7 +195,7 @@ async function run() {
         })
 
         // Update product REPORT in the Product Details section
-        app.patch('/reported-product/:id', verifyToken, async (req, res) => {
+        app.patch('/reported-product/:id', async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const updateDoc = {
@@ -252,7 +252,7 @@ async function run() {
         })
 
         // Read all products data for my product page
-        app.get('/my-product/:email', verifyToken, async (req, res) => {
+        app.get('/my-product/:email', async (req, res) => {
             const email = req.params.email
             let query = { 'product_owner.email': email }
             const result = await productsCollection.find(query).toArray()
@@ -260,7 +260,7 @@ async function run() {
         })
 
         // update a product data in my product page
-        app.put('/update-product/:id', verifyToken, async (req, res) => {
+        app.put('/update-product/:id', async (req, res) => {
             const id = req.params.id
             const productData = req.body
             const query = { _id: new ObjectId(id) }
@@ -289,7 +289,7 @@ async function run() {
         })
 
         // Update product status in the Moderator Dashboard
-        app.patch('/moderator-product/:id', verifyToken, async (req, res) => {
+        app.patch('/moderator-product/:id', async (req, res) => {
             const id = req.params.id
             const status = req.body
             const query = { _id: new ObjectId(id) }
@@ -322,7 +322,7 @@ async function run() {
 
         // Send a ping to confirm a successful connection
         // await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
     }
